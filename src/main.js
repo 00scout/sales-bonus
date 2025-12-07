@@ -77,10 +77,12 @@ function analyzeSalesData(data, options) {
     // Расчет выручки и прибыли для каждого продавца
     data.purchase_records.forEach(record => {
         const seller = sellerIndex[record.seller_id];
+        if (!seller) return; // Пропускаем, если продавец не найден
         seller.sales_count += 1;
 
         record.items.forEach(item => {
             const product = productIndex[item.sku];
+            if (!product) return; // Пропускаем, если товар не найден
             const cost = product.purchase_price * item.quantity;
             const revenue = calculateRevenue(item, product);
             const profit = revenue - cost;
@@ -108,13 +110,21 @@ function analyzeSalesData(data, options) {
     });
 
     // Подготовка итоговой коллекции с нужными полями
-    return sellerStats.map(seller => ({
-        seller_id: seller.id,
-        name: seller.name,
-        revenue: +seller.revenue.toFixed(2),
-        profit: +seller.profit.toFixed(2),
-        sales_count: seller.sales_count,
-        top_products: seller.top_products,
-        bonus: +seller.bonus.toFixed(2)
-    }));
+    const result = sellerStats.map(seller => {
+        const revenue = isNaN(seller.revenue) ? 0 : +seller.revenue.toFixed(2);
+        const profit = isNaN(seller.profit) ? 0 : +seller.profit.toFixed(2);
+        const bonus = isNaN(seller.bonus) ? 0 : +seller.bonus.toFixed(2);
+        
+        return {
+            seller_id: String(seller.id || ''),
+            name: String(seller.name || ''),
+            revenue: revenue,
+            profit: profit,
+            sales_count: Number(seller.sales_count || 0),
+            top_products: Array.isArray(seller.top_products) ? seller.top_products : [],
+            bonus: bonus
+        };
+    });
+    
+    return result;
 }
